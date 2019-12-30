@@ -19,6 +19,9 @@ Data was downloaded from [NYC OpenData](https://data.cityofnewyork.us/Transporta
 if (length(list.files("data/parquet")) == 0) {
   fs::dir_create("data/parquet")
   taxi_file <- "data/2018-taxi-data.csv"
+  if (!fs::file_exists(taxi_file)) {
+    stop("The taxi data is not available in the data/ directory. Please download the data from \n https://data.cityofnewyork.us/Transportation/2018-Yellow-Taxi-Trip-Data/ and update the filepath if necessary.", call. = FALSE)
+  }
   
   # Establish chunk size - how many rows to include in each split
   chunk_size <- 10000000
