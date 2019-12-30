@@ -1,0 +1,151 @@
+---
+title: "Arrow Experiments"
+output: html_notebook
+---
+
+This notebook is for experimenting with the `arrow` R package.
+
+```{r setup}
+# Packages ----
+library(arrow)
+library(lobstr)
+library(vroom)
+library(tidyverse)
+```
+
+## Data
+Data was downloaded from [NYC OpenData](https://data.cityofnewyork.us/Transportation/2018-Yellow-Taxi-Trip-Data/t29m-gskq) and contains details about NYC taxi trips in 2018. The following code takes the raw .csv file (~10 GB) and chunks it into smaller parquet files so the entire dataset can be queried from within R.
+```{r create-data}
+if (length(list.files("data/parquet")) == 0) {
+  fs::dir_create("data/parquet")
+  taxi_file <- "data/2018-taxi-data.csv"
+  
+  # Establish chunk size - how many rows to include in each split
+  chunk_size <- 10000000
+  
+  # Read in initial data
+  chunk_num <- 0
+  cols_spec <- cols(
+    VendorID = col_double(),
+    tpep_pickup_datetime = col_character(),
+    tpep_dropoff_datetime = col_character(),
+    passenger_count = col_double(),
+    trip_distance = col_double(),
+    RatecodeID = col_double(),
+    store_and_fwd_flag = col_character(),
+    PULocationID = col_double(),
+    DOLocationID = col_double(),
+    payment_type = col_double(),
+    fare_amount = col_double(),
+    extra = col_double(),
+    mta_tax = col_double(),
+    tip_amount = col_double(),
+    tolls_amount = col_double(),
+    improvement_surcharge = col_double(),
+    total_amount = col_double()
+  )
+  
+  taxi_chunk <- vroom(taxi_file, n_max = chunk_size, col_types = cols_spec)
+  taxi_names <- names(taxi_chunk)
+  write_parquet(taxi_chunk, glue::glue("data/parquet/taxi-{chunk_num}.parquet"))
+  while (nrow(taxi_chunk) == chunk_size) {
+    chunk_num <- chunk_num + 1
+    taxi_chunk <- vroom(taxi_file, skip = chunk_num * chunk_size, n_max = chunk_size, col_names = taxi_names, col_types = cols_spec)
+    write_parquet(taxi_chunk, glue::glue("data/parquet/taxi-{chunk_num}.parquet"))
+  }
+}  
+fs::dir_ls("data/parquet")
+```
+
+## Arrow
+Use arrow to read in data from directory of parquet files.
+```{r read-data}
+taxi_a <- open_dataset("data/parquet")
+class(taxi_a)
+obj_size(taxi_a)
+```
+
+Compare object size to a single file read into R from parquet
+```{r single-file-size}
+taxi_0 <- read_parquet("data/parquet/taxi-0.parquet")
+obj_size(taxi_0)
+rm(taxi_0)
+```
+
+Column names
+```{r col-names}
+names(taxi_a)
+```
+
+## Arrow + dplyr
+
+Number of observations
+```{r}
+taxi_a %>% 
+  tally()
+```
+**Consumes an incredible amount of RAM**
+
+```{r}
+taxi_a %>% 
+  count(VendorID) %>% 
+  summarize(total_rows = sum(n))
+```
+
+Count of passengers
+```{r}
+taxi_a %>% 
+  count(passenger_count)
+```
+
+Count of VendorIDs
+```{r}
+taxi_a %>% 
+  count(VendorID)
+```
+
+Average route distance and amount by passenger count
+```{r summarize}
+taxi_a %>% 
+  group_by(passenger_count) %>% 
+  summarize(n_obs = n(),
+            avg_distance = mean(trip_distance, na.rm = TRUE),
+            avg_charge = mean(total_amount, na.rm =TRUE))
+```
+
+Creating new columns with mutate
+```{r mutate}
+taxi_a %>% 
+  mutate(p1 = passenger_count + 1) %>% 
+  count(p1)
+```
+**Doesn't run**
+
+Filtering rows
+```{r filter}
+taxi_f <- taxi_a %>% 
+  filter(passenger_count == 1)
+
+class(taxi_f)
+```
+
+```{r}
+taxi_f %>% 
+  summarize(avg_distance = mean(trip_distance, na.rm =TRUE),
+            avg_charge = mean(total_amount, na.rm = TRUE))
+```
+
+```{r}
+taxi_a %>% 
+  filter(passenger_count > 5) %>% 
+  summarize(avg_distance = mean(trip_distance, na.rm =TRUE),
+            avg_charge = mean(total_amount, na.rm = TRUE),
+            n_obs = n())
+```
+Collect results from a query directly back into R
+```{r}
+taxi_a %>% 
+  filter(passenger_count >= 7) %>% 
+  collect()
+```
+
