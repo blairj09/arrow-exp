@@ -83,7 +83,7 @@ names(taxi_a)
 ## Arrow + dplyr
 
 Number of observations
-```{r}
+```{r, eval = FALSE}
 taxi_a %>% 
   tally()
 ```
