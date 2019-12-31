@@ -60,10 +60,10 @@
     },
     "arrow": {
       "Package": "arrow",
-      "Version": "0.15.1.20191227",
+      "Version": "0.15.1.20191230",
       "Source": "Repository",
       "Repository": "CRAN",
-      "Hash": "ed77104699407447798d5ec76523a211"
+      "Hash": "5359e873abd49420bceb7e2e98e47a29"
     },
     "askpass": {
       "Package": "askpass",
