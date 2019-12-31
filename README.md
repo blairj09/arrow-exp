@@ -11,3 +11,8 @@ install.packages("arrow", repos=c("https://dl.bintray.com/ursalabs/arrow-r", "ht
 
 This repo uses [`renv`](https://rstudio.github.io/renv/index.html). All
 necessary libraries can be installed using `renv::restore()`.
+
+## Data
+The data used in this demonstration comes from [NYC
+OpenData](https://data.cityofnewyork.us/browse?q=taxi) and contains details on
+taxi trips taken in NYC.
