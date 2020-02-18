@@ -49,7 +49,7 @@ obj_size(taxi_a)
 
 Compare object size to a single file read into R from parquet
 ```{r single-file-size}
-taxi_0 <- read_parquet("data/parquet/taxi-0.parquet")
+taxi_0 <- read_parquet("data/parquet/2017-taxi-data-0.parquet")
 obj_size(taxi_0)
 rm(taxi_0)
 ```
